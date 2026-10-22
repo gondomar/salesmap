@@ -451,14 +451,21 @@ function deleteHouse() {
   closeSheet();
 }
 
-function exportCsv() {
+async function exportCsv() {
+  const missing = [...houses].filter(([, h]) => !h.address || h.address === 'Unknown address');
+  if (missing.length) toast(`Looking up ${missing.length} missing address${missing.length === 1 ? '' : 'es'}…`, 3000);
+  for (const [id, h] of missing) {
+    const address = await geocoder.geocode({ location: { lat: h.lat, lng: h.lng } })
+      .then(({ results }) => pickAddress(results)).catch(() => '');
+    if (address && address !== 'Unknown address') { h.address = address; store.save(id, { address }); }
+  }
   const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
   const order = id => STATUSES.findIndex(s => s.id === id);
   const sorted = [...houses.values()].sort((a, b) => order(a.status) - order(b.status));
-  const rows = [['Status', 'Address', 'Name', 'Phone', 'Notes', 'Knocks', 'Last updated', 'Updated by', 'Lat', 'Lng']];
+  const rows = [['Status', 'Address', 'Name', 'Phone', 'Notes', 'Knocks', 'Last updated', 'Updated by']];
   for (const h of sorted) {
     rows.push([statusById[h.status]?.label, h.address, h.name, h.phone, h.notes, h.history?.length || 0,
-      h.updatedAt ? new Date(h.updatedAt).toLocaleString() : '', h.updatedBy, h.lat, h.lng]);
+      h.updatedAt ? new Date(h.updatedAt).toLocaleString() : '', h.updatedBy]);
   }
   const blob = new Blob([rows.map(r => r.map(esc).join(',')).join('\n')], { type: 'text/csv' });
   const a = document.createElement('a');
