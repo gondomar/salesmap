@@ -232,6 +232,8 @@ async function authenticate(fa, auth) {
   if (!user.emailVerified) {
     $('verifyEmail').textContent = user.email;
     $('verify').classList.remove('hidden');
+    // Brand-new accounts were just sent an email; older ones (e.g. made in the Firebase console) never were.
+    if (Date.now() - Date.parse(user.metadata.creationTime) > 60000) fa.sendEmailVerification(user).catch(() => {});
     await new Promise(resolve => {
       const check = async manual => {
         await user.reload().catch(() => {});
