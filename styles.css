@@ -45,7 +45,7 @@ input, textarea { width: 100%; font: inherit; font-size: 16px; padding: 11px; ma
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .panel h2 { margin: 0; color: #0f766e; font-size: 21px; }
 .panel h3 { margin: 22px 0 4px; font-size: 16px; }
-.panel ol { padding-left: 22px; margin: 4px 0; }
+.panel ol, .panel ul { padding-left: 22px; margin: 4px 0; }
 .panel li { margin-bottom: 6px; }
 .panel a { color: #0f766e; font-weight: 600; }
 .panel pre { background: #f3f4f6; padding: 10px; border-radius: 8px; font-size: 13px; overflow-x: auto; margin: 6px 0; }

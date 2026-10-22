@@ -35,7 +35,8 @@
     <button data-action="team" id="teamBtn">Team</button>
     <button data-action="maptype">Toggle satellite / map</button>
     <button data-action="export">Export to spreadsheet (CSV)</button>
-    <button data-action="share">Add someone to the app</button>
+    <button data-action="share">Guide: add someone</button>
+    <button data-action="adminGuide" id="adminGuideBtn" class="hidden">Guide: app admin</button>
     <button data-action="signout" id="signoutBtn">Sign out</button>
   </nav>
 
@@ -142,30 +143,94 @@
 
   <div id="share" class="panel hidden">
     <div class="panel-head">
-      <h2>Add someone to the app</h2>
+      <h2>Guide: add someone</h2>
       <button id="shareClose" class="icon-btn" aria-label="Close">&#10005;</button>
     </div>
+    <p>Follow these steps to give someone (a family member, a helper) access to your business's map. Only people on your team see your pins.</p>
 
     <h3>1. Add them to your team</h3>
-    <p>Open <b>Menu &rarr; Team</b>, enter their email under <b>Add someone</b>, and tap <b>Add to team</b>. Only owners can do this.</p>
-    <p class="small">Starting a separate business for someone else (like a relative with their own company)? Use <b>Create another business</b> on the Team screen instead. Only the app admin sees that option.</p>
+    <ol>
+      <li>Open <b>Menu &rarr; Team</b>.</li>
+      <li>Under <b>Add someone</b>, type their email. Use the email they'll actually sign in with.</li>
+      <li>Tick <b>Owner</b> only if they should also be able to add and remove people.</li>
+      <li>Tap <b>Add to team</b>.</li>
+    </ol>
+    <p class="small">Only owners can add people. If you don't see <b>Add someone</b>, ask your business owner to do this step.</p>
 
     <h3>2. Send them the link</h3>
     <p class="url" id="shareUrl"></p>
     <button id="shareCopy" class="primary wide">Share / copy link</button>
+    <p class="small">Text or email it to them. Tell them to open it on their phone.</p>
 
     <h3>3. They create their account</h3>
     <ol>
-      <li>Open the link and tap <b>Create account</b>.</li>
-      <li>Enter the <b>same email</b> you added, choose a password, and tap <b>Create account</b>.</li>
+      <li>Open the link and tap <b>Create account</b> (not Sign in).</li>
+      <li>Enter the <b>same email</b> you added, choose a password, type it again, and tap <b>Create account</b>.</li>
       <li>Open the confirmation email (check spam), tap the link, then go back to the app and tap <b>Continue</b>.</li>
     </ol>
-    <p class="small">Forgot a password? Tap <b>Forgot password?</b> on the sign-in screen.</p>
 
     <h3>4. Put it on their home screen</h3>
-    <p><b>iPhone:</b> open the link in <b>Safari</b> (not Chrome), sign in, tap the <b>Share</b> button (square with an up arrow), then <b>Add to Home Screen</b> &rarr; <b>Add</b>.</p>
+    <p><b>iPhone:</b> open the link in <b>Safari</b> (not Chrome), sign in, tap the <b>Share</b> button (square with an up arrow), scroll down, then <b>Add to Home Screen</b> &rarr; <b>Add</b>.</p>
     <p><b>Android:</b> open the link in <b>Chrome</b>, sign in, tap the <b>&#8942;</b> menu, then <b>Add to Home screen</b> or <b>Install app</b>.</p>
-    <p>The first time they open it from the icon, they should tap <b>Allow</b> when it asks for location.</p>
+    <p>From then on they open it from the new icon. The first time, tap <b>Allow</b> when it asks for location.</p>
+
+    <h3>If something goes wrong</h3>
+    <ul>
+      <li><b>"Isn't on a team yet":</b> the email they signed up with doesn't match what you added. Check spelling in <b>Team</b>, remove and re-add if needed, then they tap <b>Try again</b>.</li>
+      <li><b>No confirmation email:</b> check spam, then tap <b>Resend email</b>.</li>
+      <li><b>"That email already has an account":</b> they should tap <b>Back to sign in</b> and sign in instead, or use <b>Forgot password?</b>.</li>
+      <li><b>Forgot password:</b> tap <b>Forgot password?</b> on the sign-in screen.</li>
+      <li><b>"Already belongs to another business":</b> each email can be on one business only. They'll need a different email.</li>
+      <li><b>Someone leaves:</b> open <b>Team</b> and tap <b>Remove</b> next to them. They lose access right away.</li>
+    </ul>
+  </div>
+
+  <div id="adminGuide" class="panel hidden">
+    <div class="panel-head">
+      <h2>Guide: app admin</h2>
+      <button id="adminGuideClose" class="icon-btn" aria-label="Close">&#10005;</button>
+    </div>
+    <p>Only you see this. As app admin you can create businesses. You can't see other businesses' pins, and they can't see yours.</p>
+
+    <h3>Start a new business (e.g. for a relative)</h3>
+    <ol>
+      <li>Open <b>Menu &rarr; Team</b> and scroll to <b>Create another business</b>.</li>
+      <li>Enter the business name and the owner's email (the one they'll sign in with). Double-check the spelling.</li>
+      <li>Tap <b>Create business</b>.</li>
+      <li>Send the owner the app link: <span class="url">https://gondomar.github.io/salesmap/</span></li>
+      <li>Tell them to open it on their phone, tap <b>Create account</b> with that same email, choose a password, and confirm it from the email they get. (Same as steps 3 and 4 in <b>Guide: add someone</b>, which you can read to them.)</li>
+      <li>Once they're in, they add their own family or helpers from their <b>Team</b> screen, using <b>Menu &rarr; Guide: add someone</b>. You don't need to do anything else.</li>
+    </ol>
+
+    <h3>Your own team</h3>
+    <p>Same as any owner: <b>Menu &rarr; Team</b> to add or remove people, and <b>Guide: add someone</b> for the steps to send them.</p>
+
+    <h3>Rules to know</h3>
+    <ul>
+      <li>Each email belongs to <b>one</b> business only.</li>
+      <li>Every business needs at least one owner. Owners can't remove themselves.</li>
+      <li>Everyone must confirm their email before they can see any pins.</li>
+    </ul>
+
+    <h3>Fixing problems (done on a computer)</h3>
+    <ul>
+      <li><b>Typed an owner's email wrong:</b> if they haven't used it yet, open <a href="https://console.firebase.google.com/project/rose-garden-sales-map-c882a/firestore" target="_blank" rel="noopener">Firestore</a> (<b>Data</b> tab). Delete that business under <b>orgs</b> and the wrong email under <b>members</b>, then create the business again in the app.</li>
+      <li><b>Remove someone's login entirely:</b> remove them from their <b>Team</b> first, then delete them in <a href="https://console.firebase.google.com/project/rose-garden-sales-map-c882a/authentication/users" target="_blank" rel="noopener">Authentication &rarr; Users</a> (&#8942; &rarr; Delete account).</li>
+      <li><b>Someone's locked out:</b> they can use <b>Forgot password?</b> on the sign-in screen. You can see all accounts and whether they've signed in under <a href="https://console.firebase.google.com/project/rose-garden-sales-map-c882a/authentication/users" target="_blank" rel="noopener">Authentication &rarr; Users</a>.</li>
+      <li><b>Everyone gets "permission denied" or "sync error":</b> the security rules may have been changed. Copy the <a href="https://raw.githubusercontent.com/gondomar/salesmap/main/firestore.rules" target="_blank" rel="noopener">current rules</a> into <a href="https://console.firebase.google.com/project/rose-garden-sales-map-c882a/firestore" target="_blank" rel="noopener">Firestore</a> (<b>Rules</b> tab) and tap <b>Publish</b>.</li>
+      <li><b>Map won't load:</b> check the Maps key and billing in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener">Google Cloud &rarr; Credentials</a>. The key must allow <b>https://gondomar.github.io/*</b>.</li>
+    </ul>
+
+    <h3>Costs</h3>
+    <p>Firebase is on the free <b>Spark</b> plan and can't charge you. Google Maps has a card on file but a free monthly allowance; set or check a spending alert in <a href="https://console.cloud.google.com/billing/budgets" target="_blank" rel="noopener">Billing &rarr; Budgets &amp; alerts</a>. Every business uses your Maps allowance, so only create businesses for people you trust.</p>
+
+    <h3>Where everything lives</h3>
+    <ul>
+      <li><b>App code &amp; website:</b> <a href="https://github.com/gondomar/salesmap" target="_blank" rel="noopener">github.com/gondomar/salesmap</a>. Changes pushed there go live in about a minute. Everyone gets them by closing and reopening the app.</li>
+      <li><b>Pins, teams, logins:</b> <a href="https://console.firebase.google.com/project/rose-garden-sales-map-c882a" target="_blank" rel="noopener">Firebase project</a>.</li>
+      <li><b>Maps key &amp; billing:</b> <a href="https://console.cloud.google.com" target="_blank" rel="noopener">Google Cloud console</a>.</li>
+      <li><b>Changing who the app admin is:</b> the email is set in both <b>app.js</b> (APP_ADMIN) and <b>firestore.rules</b>. Both must be updated and the rules republished.</li>
+    </ul>
   </div>
 
   <div id="fatal" class="overlay hidden"><div id="fatalMsg" class="card"></div></div>

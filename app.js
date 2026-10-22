@@ -572,6 +572,8 @@ function renderTeam() {
 function setupTeam() {
   store.onOrgChange = renderTeam;
   renderTeam();
+  $('adminGuideBtn').classList.toggle('hidden', !store.isAdmin);
+  $('adminGuideClose').onclick = () => $('adminGuide').classList.add('hidden');
   $('teamClose').onclick = () => $('team').classList.add('hidden');
   $('addMemberForm').onsubmit = async e => {
     e.preventDefault();
@@ -643,6 +645,7 @@ async function main() {
     } else if (action === 'search') openSearch();
     else if (action === 'share') openShare();
     else if (action === 'team') $('team').classList.remove('hidden');
+    else if (action === 'adminGuide') $('adminGuide').classList.remove('hidden');
     else if (action === 'export') exportCsv();
     else if (action === 'signout') store.signOut();
   };
