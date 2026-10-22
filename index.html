@@ -30,7 +30,9 @@
   </header>
 
   <nav id="menu" class="menu hidden">
+    <div id="menuOrg" class="menu-org"></div>
     <button data-action="search">Find an address</button>
+    <button data-action="team" id="teamBtn">Team</button>
     <button data-action="maptype">Toggle satellite / map</button>
     <button data-action="export">Export to spreadsheet (CSV)</button>
     <button data-action="share">Add someone to the app</button>
@@ -67,11 +69,75 @@
   <div id="login" class="overlay hidden">
     <form id="loginForm" class="card">
       <h1>SalesMap</h1>
+      <p id="loginSub" class="sub"></p>
       <input id="email" type="email" placeholder="Email" autocomplete="username" required>
       <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
-      <button type="submit" class="primary">Sign in</button>
+      <input id="password2" type="password" placeholder="Confirm password" autocomplete="new-password" class="hidden">
+      <button type="submit" id="loginSubmit" class="primary">Sign in</button>
       <p id="loginError" class="error"></p>
+      <div class="links">
+        <button type="button" id="modeCreate" class="link">Create account</button>
+        <button type="button" id="modeForgot" class="link">Forgot password?</button>
+      </div>
     </form>
+  </div>
+
+  <div id="verify" class="overlay hidden">
+    <div class="card">
+      <h1>Confirm your email</h1>
+      <p>We sent a link to <b id="verifyEmail"></b>. Open it (check spam too), then come back and tap Continue.</p>
+      <button id="verifyContinue" class="primary">Continue</button>
+      <div class="links">
+        <button type="button" id="verifyResend" class="link">Resend email</button>
+        <button type="button" class="link signout">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="noOrg" class="overlay hidden">
+    <div class="card">
+      <div id="noOrgMember">
+        <h1>Almost there</h1>
+        <p><b id="noOrgEmail"></b> isn't on a team yet. Ask your business owner to add this email in <b>Menu &rarr; Team</b>, then tap Try again.</p>
+        <button class="primary" onclick="location.reload()">Try again</button>
+      </div>
+      <div id="noOrgAdmin">
+        <h1>Name your business</h1>
+        <p>Your current pins will be moved into it.</p>
+        <form id="noOrgForm">
+          <input id="noOrgName" type="text" placeholder="Business name, e.g. Rose Garden" autocomplete="off" required>
+          <button type="submit" class="primary">Create business</button>
+        </form>
+      </div>
+      <div class="links"><button type="button" class="link signout">Sign out</button></div>
+    </div>
+  </div>
+
+  <div id="team" class="panel hidden">
+    <div class="panel-head">
+      <h2 id="teamTitle">Team</h2>
+      <button id="teamClose" class="icon-btn" aria-label="Close">&#10005;</button>
+    </div>
+    <p>Everyone listed can see and edit this business's pins. Owners can add and remove people.</p>
+    <ul id="teamList" class="team-list"></ul>
+
+    <form id="addMemberForm">
+      <h3>Add someone</h3>
+      <input id="newMemberEmail" type="email" placeholder="Their email" autocomplete="off" required>
+      <label class="check"><input id="newMemberOwner" type="checkbox"> Owner (can manage the team)</label>
+      <button type="submit" class="primary wide">Add to team</button>
+      <p class="small">Then send them the link (Menu &rarr; Add someone to the app). They tap <b>Create account</b> using this same email.</p>
+    </form>
+
+    <section id="adminSection">
+      <h3>Create another business</h3>
+      <p class="small">For someone running their own business. Their pins are completely separate: you won't see theirs and they won't see yours.</p>
+      <form id="createOrgForm">
+        <input id="newOrgName" type="text" placeholder="Business name" autocomplete="off" required>
+        <input id="newOrgOwner" type="email" placeholder="Owner's email" autocomplete="off" required>
+        <button type="submit" class="primary wide">Create business</button>
+      </form>
+    </section>
   </div>
 
   <div id="share" class="panel hidden">
@@ -80,26 +146,21 @@
       <button id="shareClose" class="icon-btn" aria-label="Close">&#10005;</button>
     </div>
 
-    <h3>1. Create their login</h3>
-    <ol>
-      <li>On a computer, open <a href="https://console.firebase.google.com/project/rose-garden-sales-map-c882a/authentication/users" target="_blank" rel="noopener">Firebase &rarr; Authentication &rarr; Users</a>.</li>
-      <li>Tap <b>Add user</b>, enter their email and a password, then <b>Add user</b>.</li>
-    </ol>
+    <h3>1. Add them to your team</h3>
+    <p>Open <b>Menu &rarr; Team</b>, enter their email under <b>Add someone</b>, and tap <b>Add to team</b>. Only owners can do this.</p>
+    <p class="small">Starting a separate business for someone else (like a relative with their own company)? Use <b>Create another business</b> on the Team screen instead. Only the app admin sees that option.</p>
 
-    <h3>2. Give them access to the pins</h3>
-    <ol>
-      <li>Open <a href="https://console.firebase.google.com/project/rose-garden-sales-map-c882a/firestore" target="_blank" rel="noopener">Firebase &rarr; Firestore</a> and tap the <b>Rules</b> tab.</li>
-      <li>Find the list of emails. Put a comma after the last email, then add theirs on a new line in quotes and all lowercase:
-        <pre>'tylerlrose@gmail.com',
-'newperson@gmail.com'</pre>
-      </li>
-      <li>Tap <b>Publish</b>. Without this step they can sign in but will see "permission denied".</li>
-    </ol>
-
-    <h3>3. Send them the link</h3>
+    <h3>2. Send them the link</h3>
     <p class="url" id="shareUrl"></p>
     <button id="shareCopy" class="primary wide">Share / copy link</button>
-    <p>Also send them their email and password.</p>
+
+    <h3>3. They create their account</h3>
+    <ol>
+      <li>Open the link and tap <b>Create account</b>.</li>
+      <li>Enter the <b>same email</b> you added, choose a password, and tap <b>Create account</b>.</li>
+      <li>Open the confirmation email (check spam), tap the link, then go back to the app and tap <b>Continue</b>.</li>
+    </ol>
+    <p class="small">Forgot a password? Tap <b>Forgot password?</b> on the sign-in screen.</p>
 
     <h3>4. Put it on their home screen</h3>
     <p><b>iPhone:</b> open the link in <b>Safari</b> (not Chrome), sign in, tap the <b>Share</b> button (square with an up arrow), then <b>Add to Home Screen</b> &rarr; <b>Add</b>.</p>

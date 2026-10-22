@@ -14,6 +14,8 @@ const $ = id => document.getElementById(id);
 const houses = new Map();
 const markers = new Map();
 const APP_URL = 'https://gondomar.github.io/salesmap/';
+// Can create new businesses (also enforced in firestore.rules).
+const APP_ADMIN = 'tylerlrose@gmail.com';
 let map, geocoder, store, selected = null, tempMarker = null, meMarker = null, searchMarker = null, lastPos = null;
 
 // ---------- UI helpers ----------
@@ -68,29 +70,50 @@ async function firebaseStore() {
   const db = fs.initializeFirestore(app, {
     localCache: fs.persistentLocalCache({ tabManager: fs.persistentMultipleTabManager() }),
   });
-  const col = fs.collection(db, 'houses');
+  if (location.hostname === 'localhost' && new URLSearchParams(location.search).has('emulator')) {
+    fa.connectAuthEmulator(auth, 'http://localhost:9099', { disableWarnings: true });
+    fs.connectFirestoreEmulator(db, 'localhost', 8080);
+  }
+  const signOut = async () => { await fa.signOut(auth); location.reload(); };
+  for (const b of document.querySelectorAll('.signout')) b.onclick = signOut;
 
-  const user = await new Promise(resolve => {
-    fa.onAuthStateChanged(auth, u => {
-      $('login').classList.toggle('hidden', !!u);
-      if (u) resolve(u);
-    });
-    $('loginForm').onsubmit = async e => {
-      e.preventDefault();
-      $('loginError').textContent = '';
-      try {
-        await fa.signInWithEmailAndPassword(auth, $('email').value.trim(), $('password').value);
-      } catch (err) {
-        $('loginError').textContent = err.code === 'auth/invalid-credential' ? 'Wrong email or password.' : err.message;
-      }
-    };
+  const user = await authenticate(fa, auth);
+  const me = user.email.toLowerCase();
+  const isAdmin = me === APP_ADMIN;
+
+  const createOrg = async (name, owner) => {
+    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
+    const id = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+    const b = fs.writeBatch(db);
+    b.set(fs.doc(db, 'orgs', id), { name, owners: [owner], members: [owner] });
+    b.set(fs.doc(db, 'members', owner), { org: id });
+    await b.commit();
+    return id;
+  };
+
+  let orgId = (await fs.getDoc(fs.doc(db, 'members', me)).catch(() => null))?.data()?.org;
+  const orgRef = () => fs.doc(db, 'orgs', orgId);
+  const firstOrg = () => new Promise(resolve => {
+    const unsub = fs.onSnapshot(orgRef(), snap => { unsub(); resolve(snap.data()); }, () => resolve(null));
   });
+  let org = orgId && await firstOrg();
+  if (!org) {
+    orgId = await noOrgScreen(me, isAdmin, name => createOrg(name, me));
+    org = await firstOrg();
+  }
 
+  const col = fs.collection(db, 'orgs', orgId, 'houses');
   // Writes are not awaited: with the offline cache they resolve only after reaching the server.
   const onErr = err => toast(`Sync error: ${err.code || err.message}`, 4000);
-  return {
+  const store = {
     mode: 'cloud',
-    user: user.email,
+    user: me,
+    me,
+    isAdmin,
+    org,
+    onOrgChange: () => {},
+    isOwner: () => store.org.owners.includes(me),
+    createOrg,
     subscribe(cb) {
       fs.onSnapshot(col, snap => {
         const all = {};
@@ -104,8 +127,148 @@ async function firebaseStore() {
       return ref.id;
     },
     remove(id) { fs.deleteDoc(fs.doc(col, id)).catch(onErr); },
-    async signOut() { await fa.signOut(auth); location.reload(); },
+    async addMember(email, owner) {
+      const b = fs.writeBatch(db);
+      b.update(orgRef(), { members: fs.arrayUnion(email), ...(owner && { owners: fs.arrayUnion(email) }) });
+      b.set(fs.doc(db, 'members', email), { org: orgId });
+      await b.commit();
+    },
+    async removeMember(email) {
+      const b = fs.writeBatch(db);
+      b.update(orgRef(), { members: fs.arrayRemove(email), owners: fs.arrayRemove(email) });
+      b.delete(fs.doc(db, 'members', email));
+      await b.commit();
+    },
+    setOwner: (email, on) => fs.updateDoc(orgRef(), { owners: on ? fs.arrayUnion(email) : fs.arrayRemove(email) }),
+    signOut,
   };
+
+  fs.onSnapshot(orgRef(), snap => {
+    store.org = snap.data();
+    store.onOrgChange();
+  }, () => location.reload());
+
+  if (isAdmin) {
+    const old = await fs.getDocs(fs.collection(db, 'houses')).catch(() => null);
+    if (old && !old.empty && confirm(`Move your ${old.size} existing pins into ${org.name}?`)) {
+      for (let i = 0; i < old.docs.length; i += 200) {
+        const b = fs.writeBatch(db);
+        for (const d of old.docs.slice(i, i + 200)) {
+          b.set(fs.doc(col, d.id), d.data());
+          b.delete(d.ref);
+        }
+        await b.commit();
+      }
+      toast(`Moved ${old.size} pins into ${org.name}`, 3500);
+    }
+  }
+  return store;
+}
+
+const AUTH_ERRORS = {
+  'auth/invalid-credential': 'Wrong email or password.',
+  'auth/wrong-password': 'Wrong email or password.',
+  'auth/user-not-found': 'No account with that email. Tap "Create account".',
+  'auth/email-already-in-use': 'That email already has an account. Sign in, or use "Forgot password?".',
+  'auth/weak-password': 'Password must be at least 6 characters.',
+  'auth/invalid-email': 'That email address doesn\'t look right.',
+  'auth/missing-email': 'Enter your email first.',
+  'auth/too-many-requests': 'Too many tries. Wait a few minutes and try again.',
+  'auth/network-request-failed': 'No internet connection.',
+};
+const authError = err => AUTH_ERRORS[err.code] || err.message;
+
+async function authenticate(fa, auth) {
+  const LOGIN_MODES = {
+    signin: { sub: '', submit: 'Sign in' },
+    create: { sub: 'Your business owner must add your email to their team first.', submit: 'Create account' },
+    forgot: { sub: 'We\'ll email you a link to set a new password.', submit: 'Send reset link' },
+  };
+  let mode;
+  const setMode = m => {
+    mode = m;
+    $('loginSub').textContent = LOGIN_MODES[m].sub;
+    $('loginSubmit').textContent = LOGIN_MODES[m].submit;
+    $('password').classList.toggle('hidden', m === 'forgot');
+    $('password').required = m !== 'forgot';
+    $('password').autocomplete = m === 'create' ? 'new-password' : 'current-password';
+    $('password2').classList.toggle('hidden', m !== 'create');
+    $('password2').required = m === 'create';
+    $('modeCreate').textContent = m === 'signin' ? 'Create account' : 'Back to sign in';
+    $('modeForgot').classList.toggle('hidden', m !== 'signin');
+    $('loginError').textContent = '';
+  };
+  $('modeCreate').onclick = () => setMode(mode === 'signin' ? 'create' : 'signin');
+  $('modeForgot').onclick = () => setMode('forgot');
+  setMode('signin');
+
+  const user = await new Promise(resolve => {
+    const unsub = fa.onAuthStateChanged(auth, u => {
+      $('login').classList.toggle('hidden', !!u);
+      if (u) { unsub(); resolve(u); }
+    });
+    $('loginForm').onsubmit = async e => {
+      e.preventDefault();
+      const email = $('email').value.trim();
+      const pw = $('password').value;
+      $('loginError').textContent = '';
+      try {
+        if (mode === 'signin') await fa.signInWithEmailAndPassword(auth, email, pw);
+        else if (mode === 'forgot') {
+          await fa.sendPasswordResetEmail(auth, email);
+          setMode('signin');
+          toast('Check your email for a link to set your password.', 4000);
+        } else {
+          if (pw !== $('password2').value) return void ($('loginError').textContent = 'Passwords don\'t match.');
+          const cred = await fa.createUserWithEmailAndPassword(auth, email, pw);
+          await fa.sendEmailVerification(cred.user);
+        }
+      } catch (err) {
+        $('loginError').textContent = authError(err);
+      }
+    };
+  });
+
+  if (!user.emailVerified) {
+    $('verifyEmail').textContent = user.email;
+    $('verify').classList.remove('hidden');
+    await new Promise(resolve => {
+      const check = async manual => {
+        await user.reload().catch(() => {});
+        if (!user.emailVerified) return manual && toast('Not confirmed yet. Tap the link in the email first.', 3500);
+        await user.getIdToken(true);
+        document.removeEventListener('visibilitychange', onVisible);
+        $('verify').classList.add('hidden');
+        resolve();
+      };
+      const onVisible = () => document.visibilityState === 'visible' && check(false);
+      document.addEventListener('visibilitychange', onVisible);
+      $('verifyContinue').onclick = () => check(true);
+      $('verifyResend').onclick = () => fa.sendEmailVerification(user)
+        .then(() => toast('Sent. Check your inbox and spam folder.', 3500))
+        .catch(err => toast(authError(err), 3500));
+    });
+  }
+  return user;
+}
+
+function noOrgScreen(me, isAdmin, createOrg) {
+  $('noOrgEmail').textContent = me;
+  $('noOrgAdmin').classList.toggle('hidden', !isAdmin);
+  $('noOrgMember').classList.toggle('hidden', isAdmin);
+  $('noOrg').classList.remove('hidden');
+  return new Promise(resolve => {
+    $('noOrgForm').onsubmit = async e => {
+      e.preventDefault();
+      try {
+        const id = await createOrg($('noOrgName').value.trim());
+        $('noOrg').classList.add('hidden');
+        resolve(id);
+      } catch (err) {
+        toast(`Couldn't create business: ${err.code || err.message}`, 4000);
+      }
+    };
+  });
 }
 
 // ---------- Map ----------
@@ -298,7 +461,7 @@ function exportCsv() {
   const blob = new Blob([rows.map(r => r.map(esc).join(',')).join('\n')], { type: 'text/csv' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `salesmap-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `${store.org?.name || 'salesmap'}-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
@@ -342,6 +505,81 @@ async function searchAddress(query) {
 function openShare() {
   $('shareUrl').textContent = APP_URL;
   $('share').classList.remove('hidden');
+}
+
+// ---------- Team ----------
+const cleanEmail = s => s.trim().toLowerCase();
+
+async function teamAction(fn, done) {
+  try {
+    await fn();
+    if (done) toast(done, 4000);
+    return true;
+  } catch (err) {
+    toast(err.code === 'permission-denied'
+      ? 'Not allowed. That email may already belong to another business.'
+      : `Couldn't save: ${err.code || err.message}`, 4500);
+    return false;
+  }
+}
+
+function renderTeam() {
+  const org = store.org;
+  const canEdit = store.isOwner();
+  $('menuOrg').textContent = org.name;
+  $('teamTitle').textContent = org.name;
+  $('teamList').replaceChildren(...[...org.members].sort().map(email => {
+    const isOwner = org.owners.includes(email);
+    const li = document.createElement('li');
+    const who = document.createElement('div');
+    who.className = 'who';
+    who.textContent = email + (email === store.me ? ' (you)' : '');
+    const role = document.createElement('div');
+    role.className = 'role';
+    role.textContent = isOwner ? 'Owner' : 'Member';
+    li.append(who, role);
+    if (canEdit && email !== store.me) {
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      const btn = (label, onclick) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.onclick = onclick;
+        return b;
+      };
+      actions.append(
+        btn(isOwner ? 'Remove owner' : 'Make owner', () => teamAction(() => store.setOwner(email, !isOwner))),
+        btn('Remove', () => confirm(`Remove ${email}? They will lose access to this business's pins.`)
+          && teamAction(() => store.removeMember(email))),
+      );
+      li.append(actions);
+    }
+    return li;
+  }));
+  $('addMemberForm').classList.toggle('hidden', !canEdit);
+  $('adminSection').classList.toggle('hidden', !store.isAdmin);
+}
+
+function setupTeam() {
+  store.onOrgChange = renderTeam;
+  renderTeam();
+  $('teamClose').onclick = () => $('team').classList.add('hidden');
+  $('addMemberForm').onsubmit = async e => {
+    e.preventDefault();
+    const email = cleanEmail($('newMemberEmail').value);
+    if (store.org.members.includes(email)) return toast('Already on the team');
+    const ok = await teamAction(() => store.addMember(email, $('newMemberOwner').checked),
+      `Added. Send them the link and have them tap "Create account".`);
+    if (ok) { $('newMemberEmail').value = ''; $('newMemberOwner').checked = false; }
+  };
+  $('createOrgForm').onsubmit = async e => {
+    e.preventDefault();
+    const name = $('newOrgName').value.trim();
+    const owner = cleanEmail($('newOrgOwner').value);
+    const ok = await teamAction(() => store.createOrg(name, owner),
+      `Created ${name}. Send ${owner} the link and have them tap "Create account".`);
+    if (ok) { $('newOrgName').value = ''; $('newOrgOwner').value = ''; }
+  };
 }
 
 // ---------- Startup ----------
@@ -395,15 +633,16 @@ async function main() {
       localStorage.setItem('mapType', t);
     } else if (action === 'search') openSearch();
     else if (action === 'share') openShare();
+    else if (action === 'team') $('team').classList.remove('hidden');
     else if (action === 'export') exportCsv();
     else if (action === 'signout') store.signOut();
   };
 
   store = await storePromise;
   if (store.mode === 'local') {
-    $('signoutBtn').classList.add('hidden');
+    for (const id of ['signoutBtn', 'teamBtn', 'menuOrg']) $(id).classList.add('hidden');
     toast('Local mode: pins are saved on this device only', 4000);
-  }
+  } else setupTeam();
   store.subscribe(render);
 }
 

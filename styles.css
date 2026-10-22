@@ -57,6 +57,21 @@ input, textarea { width: 100%; font: inherit; font-size: 16px; padding: 11px; ma
 .card { background: #fff; border-radius: 16px; padding: 24px; width: 100%; max-width: 360px; line-height: 1.5; }
 .card h1 { margin: 0 0 8px; color: #0f766e; }
 .card button { width: 100%; padding: 13px; margin-top: 14px; font-weight: 700; }
+.card p { margin: 6px 0; }
+.card .sub { color: #4b5563; font-size: 14px; }
+.links { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.card .links button, .link { width: auto; margin: 0; padding: 6px 0; background: none; color: #0f766e; font-weight: 600; font-size: 14px; }
+.menu-org { padding: 12px 18px 8px; font-size: 12px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: .04em; }
+.team-list { list-style: none; padding: 0; margin: 12px 0; }
+.team-list li { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid #f3f4f6; }
+.team-list .who { font-weight: 600; word-break: break-all; }
+.team-list .role { color: #6b7280; font-size: 13px; align-self: center; }
+.team-list .actions { grid-column: span 2; display: flex; gap: 8px; }
+.team-list .actions button { padding: 6px 10px; font-size: 13px; background: #f3f4f6; }
+.check { display: flex; align-items: center; gap: 8px; margin: 10px 0; font-size: 15px; }
+.check input { width: auto; margin: 0; }
+.small { font-size: 13px; color: #6b7280; }
+#addMemberForm .wide, #createOrgForm .wide { margin-top: 4px; }
 .error { color: #b91c1c; min-height: 1em; margin: 10px 0 0; font-size: 14px; }
 
 .toast { position: fixed; left: 50%; transform: translateX(-50%); top: calc(env(safe-area-inset-top) + 60px); background: #111827; color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; z-index: 20; max-width: 90vw; text-align: center; }

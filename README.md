@@ -44,8 +44,21 @@ an app without going through the App Store.
 4. In **Authentication > Settings > Authorized domains**, add `YOUR-GITHUB-USERNAME.github.io`.
 5. **Build > Firestore Database > Create database**: pick a location near you and choose
    *production mode*.
-6. On the Firestore **Rules** tab, paste the contents of `firestore.rules`, replace
-   `you@example.com` with your login email, and click **Publish**.
+6. On the Firestore **Rules** tab, paste the contents of `firestore.rules` and click
+   **Publish**. Change `tylerlrose@gmail.com` in it (and `APP_ADMIN` in `app.js`) if a
+   different person should be the app admin.
+
+## Businesses and teams
+
+Each business has its own pins and its own team. People only ever see their own business.
+
+- **App admin** (`APP_ADMIN` in `app.js` and `firestore.rules`): the only person who can create
+  businesses (**☰ > Team > Create another business**). They can't see other businesses' pins.
+- **Owners**: add and remove people on their team (**☰ > Team**).
+- **Members**: see and edit their business's pins.
+
+New people tap **Create account** with the email an owner added, then confirm their email.
+Each email can belong to one business.
 
 If you leave `FIREBASE_CONFIG` as `null`, the app runs in local mode: pins are saved only in
 that browser, with no login.
@@ -68,7 +81,7 @@ choose branch `main` and folder `/ (root)`, then click **Save**. After about a m
 is live at `https://YOUR-GITHUB-USERNAME.github.io/salesmap/`.
 
 The keys in `config.js` are designed to be public. The Maps key only works on your website,
-and only your login can read or change pins (enforced by `firestore.rules`). Your customer
+and only a business's team can read or change its pins (enforced by `firestore.rules`). Your customer
 data lives in Firebase, not in the repo.
 
 ## 5. Install it on your phone

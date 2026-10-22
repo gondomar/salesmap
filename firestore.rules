@@ -1,14 +1,45 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function email() { return request.auth.token.email.lower(); }
+    // The app admin can create new businesses. They cannot see other businesses' pins.
+    function isAppAdmin() { return signedIn() && email() == 'tylerlrose@gmail.com'; }
+    function orgData(orgId) { return get(/databases/$(database)/documents/orgs/$(orgId)).data; }
+    function isMember(orgId) { return signedIn() && email() in orgData(orgId).members; }
+    function isOwner(orgId) { return signedIn() && email() in orgData(orgId).owners; }
+
+    // A business: { name, owners: [emails], members: [emails] }. Owners are also members.
+    match /orgs/{orgId} {
+      allow read: if signedIn() && email() in resource.data.members;
+      allow create: if isAppAdmin()
+        && request.resource.data.keys().hasOnly(['name', 'owners', 'members'])
+        && request.resource.data.name is string
+        && request.resource.data.owners.size() > 0
+        && request.resource.data.members.hasAll(request.resource.data.owners);
+      allow update: if signedIn() && email() in resource.data.owners
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'owners', 'members'])
+        && request.resource.data.owners.size() > 0
+        && request.resource.data.members.hasAll(request.resource.data.owners);
+
+      match /houses/{houseId} {
+        allow read, write: if isMember(orgId);
+      }
+    }
+
+    // Pointer from a person's email (lowercase) to their business, so the app knows which one to open.
+    // Access is still decided by the business's members list above.
+    match /members/{memberEmail} {
+      allow read: if signedIn() && email() == memberEmail;
+      allow create: if isAppAdmin() || isOwner(request.resource.data.org);
+      allow delete: if signedIn() && isOwner(resource.data.org);
+    }
+
+    // Pins from before businesses existed. Only kept so the app admin can move them into Rose Garden.
     match /houses/{houseId} {
-      // Only these accounts can see or change your pins. Add helpers' emails here (lowercase).
-      allow read, write: if request.auth != null
-        && request.auth.token.email.lower() in [
-          'tylerlrose@gmail.com',
-          'hyrumkrose@gmail.com',
-          'shannonmarierose@gmail.com'
-        ];
+      allow read, delete: if isAppAdmin();
     }
   }
 }
