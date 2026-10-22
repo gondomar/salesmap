@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /houses/{houseId} {
+      // Only these accounts can see or change your pins. Add helpers' emails here (lowercase).
+      allow read, write: if request.auth != null
+        && request.auth.token.email.lower() in ['tylerlrose@gmail.com'];
+    }
+  }
+}

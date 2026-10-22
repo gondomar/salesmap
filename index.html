@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SalesMap">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <title>SalesMap</title>
+</head>
+<body>
+  <div id="map"></div>
+
+  <header id="topbar">
+    <div id="filters"></div>
+    <button id="menuBtn" class="icon-btn" aria-label="Menu">&#9776;</button>
+  </header>
+
+  <nav id="menu" class="menu hidden">
+    <button data-action="maptype">Toggle satellite / map</button>
+    <button data-action="export">Export to spreadsheet (CSV)</button>
+    <button data-action="signout" id="signoutBtn">Sign out</button>
+  </nav>
+
+  <button id="locateBtn" class="fab" aria-label="Center on my location">
+    <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+  </button>
+
+  <div id="hint" class="hint">Tap a house to mark it</div>
+
+  <section id="sheet" class="sheet hidden" aria-live="polite">
+    <div class="sheet-head">
+      <div class="sheet-title">
+        <div id="sheetAddress" class="address"></div>
+        <div id="sheetMeta" class="meta"></div>
+      </div>
+      <button id="sheetClose" class="icon-btn" aria-label="Close">&#10005;</button>
+    </div>
+    <div id="statusButtons" class="status-grid"></div>
+    <details id="details">
+      <summary>Name, phone &amp; notes</summary>
+      <input id="fName" type="text" placeholder="Name" autocomplete="off">
+      <input id="fPhone" type="tel" placeholder="Phone" autocomplete="off">
+      <textarea id="fNotes" rows="3" placeholder="Notes (price quoted, best time, etc.)"></textarea>
+      <div class="row">
+        <button id="saveBtn" class="primary">Save details</button>
+        <button id="deleteBtn" class="danger">Delete pin</button>
+      </div>
+    </details>
+  </section>
+
+  <div id="login" class="overlay hidden">
+    <form id="loginForm" class="card">
+      <h1>SalesMap</h1>
+      <input id="email" type="email" placeholder="Email" autocomplete="username" required>
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
+      <button type="submit" class="primary">Sign in</button>
+      <p id="loginError" class="error"></p>
+    </form>
+  </div>
+
+  <div id="fatal" class="overlay hidden"><div id="fatalMsg" class="card"></div></div>
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
