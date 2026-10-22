@@ -13,8 +13,8 @@ const LOOKING_UP = 'Looking up address…';
 const $ = id => document.getElementById(id);
 const houses = new Map();
 const markers = new Map();
-const hiddenStatuses = new Set(JSON.parse(localStorage.getItem('hiddenStatuses') || '[]'));
-let map, geocoder, store, selected = null, tempMarker = null, meMarker = null, lastPos = null;
+const APP_URL = 'https://gondomar.github.io/salesmap/';
+let map, geocoder, store, selected = null, tempMarker = null, meMarker = null, searchMarker = null, lastPos = null;
 
 // ---------- UI helpers ----------
 let toastTimer;
@@ -143,27 +143,8 @@ function render(all) {
       markers.set(id, m);
     }
     m.setIcon(pinIcon(h.status));
-    m.setVisible(!hiddenStatuses.has(h.status));
   }
-  renderFilters();
   if (selected?.id) houses.has(selected.id) ? refreshSheetStatus() : closeSheet();
-}
-
-function renderFilters() {
-  const counts = {};
-  for (const h of houses.values()) counts[h.status] = (counts[h.status] || 0) + 1;
-  $('filters').replaceChildren(...STATUSES.map(s => {
-    const b = document.createElement('button');
-    b.className = 'chip' + (hiddenStatuses.has(s.id) ? ' off' : '');
-    b.innerHTML = `<span class="dot" style="background:${s.color}"></span>${s.label} ${counts[s.id] || 0}`;
-    b.onclick = () => {
-      hiddenStatuses.has(s.id) ? hiddenStatuses.delete(s.id) : hiddenStatuses.add(s.id);
-      localStorage.setItem('hiddenStatuses', JSON.stringify([...hiddenStatuses]));
-      for (const [id, m] of markers) m.setVisible(!hiddenStatuses.has(houses.get(id).status));
-      renderFilters();
-    };
-    return b;
-  }));
 }
 
 function startLocation() {
@@ -244,6 +225,15 @@ function refreshSheetStatus() {
     return b;
   }));
   $('deleteBtn').classList.toggle('hidden', !h);
+  updateSaveBtn();
+}
+
+function updateSaveBtn() {
+  const h = (selected?.id && houses.get(selected.id)) || {};
+  const f = detailFields();
+  const dirty = ['name', 'phone', 'notes'].some(k => f[k] !== (h[k] || ''));
+  $('saveBtn').disabled = !dirty;
+  $('saveBtn').textContent = dirty || !selected?.id ? 'Save details' : 'Saved';
 }
 
 function closeSheet() {
@@ -287,6 +277,7 @@ function saveDetails() {
   if (!selected.id) return toast('Pick a status first');
   store.save(selected.id, { ...detailFields(), updatedAt: Date.now() });
   toast('Saved');
+  updateSaveBtn();
 }
 
 function deleteHouse() {
@@ -297,10 +288,12 @@ function deleteHouse() {
 
 function exportCsv() {
   const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const rows = [['Address', 'Status', 'Name', 'Phone', 'Notes', 'Knocks', 'Last updated', 'Lat', 'Lng']];
-  for (const h of houses.values()) {
-    rows.push([h.address, statusById[h.status]?.label, h.name, h.phone, h.notes, h.history?.length || 0,
-      h.updatedAt ? new Date(h.updatedAt).toLocaleString() : '', h.lat, h.lng]);
+  const order = id => STATUSES.findIndex(s => s.id === id);
+  const sorted = [...houses.values()].sort((a, b) => order(a.status) - order(b.status));
+  const rows = [['Status', 'Address', 'Name', 'Phone', 'Notes', 'Knocks', 'Last updated', 'Updated by', 'Lat', 'Lng']];
+  for (const h of sorted) {
+    rows.push([statusById[h.status]?.label, h.address, h.name, h.phone, h.notes, h.history?.length || 0,
+      h.updatedAt ? new Date(h.updatedAt).toLocaleString() : '', h.updatedBy, h.lat, h.lng]);
   }
   const blob = new Blob([rows.map(r => r.map(esc).join(',')).join('\n')], { type: 'text/csv' });
   const a = document.createElement('a');
@@ -308,6 +301,47 @@ function exportCsv() {
   a.download = `salesmap-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// ---------- Address search ----------
+function openSearch() {
+  closeSheet();
+  $('searchBar').classList.remove('hidden');
+  $('searchInput').focus();
+}
+
+function closeSearch() {
+  $('searchBar').classList.add('hidden');
+  $('searchInput').blur();
+}
+
+async function searchAddress(query) {
+  if (!query.trim()) return;
+  try {
+    const { results } = await geocoder.geocode({ address: query, bounds: map.getBounds(), region: 'us' });
+    const r = results[0];
+    const loc = r.geometry.location;
+    searchMarker ||= new google.maps.Marker({
+      clickable: false, zIndex: 8000,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 22, fillOpacity: 0, strokeColor: '#facc15', strokeWeight: 4 },
+    });
+    searchMarker.setPosition(loc);
+    searchMarker.setMap(map);
+    map.panTo(loc);
+    map.setZoom(20);
+    closeSearch();
+    toast(r.geometry.location_type === 'APPROXIMATE'
+      ? `Closest match: ${r.formatted_address.replace(/, USA$/, '')}`
+      : 'Tap the house inside the yellow circle to mark it', 4000);
+  } catch {
+    toast('Address not found. Try adding the city.', 3000);
+  }
+}
+
+// ---------- Share instructions ----------
+function openShare() {
+  $('shareUrl').textContent = APP_URL;
+  $('share').classList.remove('hidden');
 }
 
 // ---------- Startup ----------
@@ -329,8 +363,19 @@ async function main() {
     tilt: 0,
   });
   geocoder = new Geocoder();
-  map.addListener('click', e => openNew(e.latLng));
+  map.addListener('click', e => { searchMarker?.setMap(null); closeSearch(); openNew(e.latLng); });
   startLocation();
+
+  for (const id of ['fName', 'fPhone', 'fNotes']) $(id).addEventListener('input', updateSaveBtn);
+  $('searchForm').onsubmit = e => { e.preventDefault(); searchAddress($('searchInput').value); };
+  $('searchClose').onclick = closeSearch;
+  $('shareClose').onclick = () => $('share').classList.add('hidden');
+  $('shareCopy').onclick = async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: 'SalesMap', url: APP_URL });
+      else { await navigator.clipboard.writeText(APP_URL); toast('Link copied'); }
+    } catch {}
+  };
 
   $('locateBtn').onclick = () => {
     if (!lastPos) return toast('Waiting for your location…');
@@ -348,7 +393,9 @@ async function main() {
       const t = map.getMapTypeId() === 'roadmap' ? 'hybrid' : 'roadmap';
       map.setMapTypeId(t);
       localStorage.setItem('mapType', t);
-    } else if (action === 'export') exportCsv();
+    } else if (action === 'search') openSearch();
+    else if (action === 'share') openShare();
+    else if (action === 'export') exportCsv();
     else if (action === 'signout') store.signOut();
   };
 

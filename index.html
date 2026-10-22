@@ -18,18 +18,27 @@
   <div id="map"></div>
 
   <header id="topbar">
-    <div id="filters"></div>
+    <div id="searchBar" class="search hidden">
+      <form id="searchForm">
+        <input id="searchInput" type="search" placeholder="Enter an address" enterkeyhint="search" autocomplete="street-address">
+        <button type="submit" class="primary">Go</button>
+      </form>
+      <button id="searchClose" class="icon-btn" aria-label="Close search">&#10005;</button>
+    </div>
+    <div class="spacer"></div>
     <button id="menuBtn" class="icon-btn" aria-label="Menu">&#9776;</button>
   </header>
 
   <nav id="menu" class="menu hidden">
+    <button data-action="search">Find an address</button>
     <button data-action="maptype">Toggle satellite / map</button>
     <button data-action="export">Export to spreadsheet (CSV)</button>
+    <button data-action="share">Add someone to the app</button>
     <button data-action="signout" id="signoutBtn">Sign out</button>
   </nav>
 
-  <button id="locateBtn" class="fab" aria-label="Center on my location">
-    <svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+  <button id="locateBtn" class="fab" aria-label="Go to my location">
+    <svg viewBox="0 0 24 24" width="26" height="26"><path d="M21 3 3 10.5l7.5 3 3 7.5z" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
   </button>
 
   <div id="hint" class="hint">Tap a house to mark it</div>
@@ -63,6 +72,39 @@
       <button type="submit" class="primary">Sign in</button>
       <p id="loginError" class="error"></p>
     </form>
+  </div>
+
+  <div id="share" class="panel hidden">
+    <div class="panel-head">
+      <h2>Add someone to the app</h2>
+      <button id="shareClose" class="icon-btn" aria-label="Close">&#10005;</button>
+    </div>
+
+    <h3>1. Create their login</h3>
+    <ol>
+      <li>On a computer, open <a href="https://console.firebase.google.com/project/rose-garden-sales-map-c882a/authentication/users" target="_blank" rel="noopener">Firebase &rarr; Authentication &rarr; Users</a>.</li>
+      <li>Tap <b>Add user</b>, enter their email and a password, then <b>Add user</b>.</li>
+    </ol>
+
+    <h3>2. Give them access to the pins</h3>
+    <ol>
+      <li>Open <a href="https://console.firebase.google.com/project/rose-garden-sales-map-c882a/firestore" target="_blank" rel="noopener">Firebase &rarr; Firestore</a> and tap the <b>Rules</b> tab.</li>
+      <li>Find the list of emails. Put a comma after the last email, then add theirs on a new line in quotes and all lowercase:
+        <pre>'tylerlrose@gmail.com',
+'newperson@gmail.com'</pre>
+      </li>
+      <li>Tap <b>Publish</b>. Without this step they can sign in but will see "permission denied".</li>
+    </ol>
+
+    <h3>3. Send them the link</h3>
+    <p class="url" id="shareUrl"></p>
+    <button id="shareCopy" class="primary wide">Share / copy link</button>
+    <p>Also send them their email and password.</p>
+
+    <h3>4. Put it on their home screen</h3>
+    <p><b>iPhone:</b> open the link in <b>Safari</b> (not Chrome), sign in, tap the <b>Share</b> button (square with an up arrow), then <b>Add to Home Screen</b> &rarr; <b>Add</b>.</p>
+    <p><b>Android:</b> open the link in <b>Chrome</b>, sign in, tap the <b>&#8942;</b> menu, then <b>Add to Home screen</b> or <b>Install app</b>.</p>
+    <p>The first time they open it from the icon, they should tap <b>Allow</b> when it asks for location.</p>
   </div>
 
   <div id="fatal" class="overlay hidden"><div id="fatalMsg" class="card"></div></div>

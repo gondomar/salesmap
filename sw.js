@@ -1,6 +1,6 @@
 // Caches the app's own files so it opens quickly and survives spotty signal.
 // Network-first, so updates you publish show up on the next launch.
-const CACHE = 'salesmap-v1';
+const CACHE = 'salesmap-v2';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'config.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png'];
 

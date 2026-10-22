@@ -83,6 +83,9 @@ Allow location access when asked so the blue dot shows where you are.
 - Tap a house to drop a pin. The address fills in automatically. Tap a status to save it.
 - Tap an existing pin to change its status. Each tap logs a knock, so you can see "Not home · 3 knocks".
 - Open **Name, phone & notes** to record details such as a quoted price or best time to call back.
-- Tap the colored chips at the top to show or hide each status.
-- Use **☰ > Export to spreadsheet** to download a CSV that opens in Excel or Google Sheets.
+- Tap the arrow button (bottom right) to jump back to where you are.
+- Use **☰ > Find an address** to jump to an address, then tap the house inside the yellow circle.
+- Use **☰ > Export to spreadsheet** to download a CSV that opens in Excel or Google Sheets. Use
+  the Status column to filter, e.g. just clients.
+- **☰ > Add someone to the app** has step-by-step instructions for giving someone access.
 - **☰ > Toggle satellite / map** switches between aerial and street views.
